@@ -10,10 +10,10 @@ And inspired by [esptool-js](https://github.com/espressif/esptool-js).
 ## Installation
 
 ```
-git clone https://github.com/spacehuhntech/espwebtool
-cd serial
+git clone https://github.com/juthomas/EspWebTool
+cd espwebtool
 npm install
-npm run
+npm run start
 ```
 
 ## License 
