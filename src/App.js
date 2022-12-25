@@ -26,7 +26,7 @@ const App = () => {
   const [espStub, setEspStub] = React.useState(undefined) // ESP flasher stuff
   const [uploads, setUploads] = React.useState([]) // Uploaded Files
   const [settingsOpen, setSettingsOpen] = React.useState(false) // Settings Window
-  const [settings, setSettings] = React.useState({...defaultSettings}) // Settings
+  const [settings, setSettings] = React.useState({ ...defaultSettings }) // Settings
   const [confirmErase, setConfirmErase] = React.useState(false) // Confirm Erase Window
   const [confirmProgram, setConfirmProgram] = React.useState(false) // Confirm Flash Window
   const [flashing, setFlashing] = React.useState(false) // Enable/Disable buttons
@@ -61,10 +61,10 @@ const App = () => {
     })
 
     try {
-      toast.info('Connecting...', { 
-        position: 'top-center', 
-        autoClose: false, 
-        toastId: 'connecting' 
+      toast.info('Connecting...', {
+        position: 'top-center',
+        autoClose: false,
+        toastId: 'connecting'
       })
       toast.update('connecting', {
         render: 'Connecting...',
@@ -88,7 +88,6 @@ const App = () => {
         autoClose: 3000
       })
 
-      //console.log(newEspStub)
 
       newEspStub.port.addEventListener('disconnect', () => {
         setConnected(false)
@@ -100,8 +99,11 @@ const App = () => {
       setEspStub(newEspStub)
       setUploads(await loadFiles(esploader.chipName))
       setChipName(esploader.chipName)
+      await newEspStub.port.setSignals({ requestToSend: true });
+      await newEspStub.port.setSignals({ dataTerminalReady: false });
+      await newEspStub.port.setSignals({ requestToSend: false });
     } catch (err) {
-      const shortErrMsg = `${err}`.replace('Error: ','')
+      const shortErrMsg = `${err}`.replace('Error: ', '')
 
       toast.update('connecting', {
         render: shortErrMsg,
@@ -116,6 +118,39 @@ const App = () => {
     } finally {
       setConnecting(false)
     }
+  }
+
+
+  //RTS Hard reset
+  const reset = async () => {
+    setConfirmErase(false)
+    setFlashing(true)
+    toast(`Resetting board...`, { position: 'top-center', toastId: 'reset', autoClose: false })
+
+    try {
+      await espStub.port.setSignals({ requestToSend: true });
+      await espStub.port.setSignals({ dataTerminalReady: false });
+      await espStub.port.setSignals({ requestToSend: false });
+      // await espStub.eraseFlash()
+      toast.update('reset', { render: 'Board has been reset', type: toast.TYPE.INFO, autoClose: 1000 })
+    } catch (e) {
+      addOutput(`ERROR!\n${e}`)
+      toast.update('reset', { render: `ERROR!\n${e}`, type: toast.TYPE.ERROR, autoClose: 1000 })
+      console.error(e)
+    } finally {
+      setFlashing(false)
+    }
+  }
+
+  // Disconnect port
+  const disconnect = async () => {
+    if (espStub) {
+      await espStub.disconnect()
+      await espStub.port.close()
+      setEspStub(undefined)
+    }
+    toast(`Disconnected`, { position: 'top-center', toastId: 'erase', autoClose: 1000 })
+    setConnected(false);
   }
 
   // Erase firmware on ESP
@@ -202,6 +237,9 @@ const App = () => {
     if (success) {
       addOutput(`Done!`)
       addOutput(`To run the new firmware please reset your device.`)
+      await espStub.port.setSignals({ requestToSend: true });
+      await espStub.port.setSignals({ dataTerminalReady: false });
+      await espStub.port.setSignals({ requestToSend: false });
 
       toast.success('Done! Reset ESP to run new firmware.', { position: 'top-center', toastId: 'uploaded', autoClose: 3000 })
     } else {
@@ -216,7 +254,8 @@ const App = () => {
   return (
     <Box sx={{ minWidth: '25rem' }}>
       <Header sx={{ mb: '1rem' }} />
-
+      <button onClick={() => reset()}>Reset</button>
+      <button onClick={() => disconnect()}>Disconnect</button>
       <Grid container spacing={1} direction='column' justifyContent='space-around' alignItems='center' sx={{ minHeight: 'calc(100vh - 116px)' }}>
 
         {/* Home Page */}
